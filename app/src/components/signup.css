@@ -1,0 +1,69 @@
+.c-signup-text {
+  color: #A379E5;
+  text-align: center;
+  font-weight: bold;
+  font-size: 35px;
+}
+
+.c-signup-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.c-signup-choice-buttons {
+  width: 250px;
+  cursor: pointer;
+}
+
+.c-home-fluid-top {
+  position: fixed;
+  top: 0;
+  right: 0;
+}
+
+.c-signup-form--wrapper {
+  width: 100%;
+  border-radius: 12px;
+  background: linear-gradient(to right, #e7d5f2, #caeeef);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 60px;
+}
+
+.c-signup-form {
+  text-align: center;
+  min-width: 380px;
+  margin: 50px auto;
+}
+
+.c-signup-form--section {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.c-signup-form--input {
+  padding: 8px 12px;
+  border: 1px solid gray;
+  font-weight: bold;
+  color: #7d7d86;
+  border-radius: 4px;
+  width: 100%;
+  margin-left: 12px;
+  margin-right: 12px;
+}
+
+.c-signup-form--submit {
+  width: 90%;
+  border-radius: 20px;
+  background-color: #A379E5;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border: 0px;
+  cursor: pointer;
+  margin-top: 20px;
+  padding: 8px 12px;
+}

@@ -12,7 +12,7 @@ import {
   web3
 } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
-import idl from './on_chain_twitter_3.json';
+import idl from './ehr.json';
 import {
   getPhantomWallet
 } from '@solana/wallet-adapter-wallets';
@@ -25,22 +25,16 @@ import {
   WalletModalProvider,
   WalletMultiButton
 } from '@solana/wallet-adapter-react-ui';
-import 'bootstrap/dist/css/bootstrap.css';
 import { Button,Col,Row, Form } from 'react-bootstrap';
 import { useSnackbar } from "notistack";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { solid, regular, brands } from '@fortawesome/fontawesome-svg-core/import.macro'; 
-import 'react-toastify/dist/ReactToastify.css';  
 import { ToastContainer, toast } from 'react-toastify';    
-
-// import { add, from, toString } from '@pacote/u64';
-// import { TweetBody } from './components/tweet.js';
-// import {PullToRefresh, PullDownContent, ReleaseContent, RefreshContent} from "react-js-pull-to-refresh";
-require('@solana/wallet-adapter-react-ui/styles.css');
+import HomePage from './components/HomePage';
+//require('@solana/wallet-adapter-react-ui/styles.css');
 
 const wallets = [
   /* view list of available wallets at https://github.com/solana-labs/wallet-adapter#wallets */
-  new getPhantomWallet()
+  getPhantomWallet()
 ]
 
 const {
@@ -55,30 +49,15 @@ const opts = {
 const programID = new PublicKey(idl.metadata.address);
 
 function App() {
-  const [value, setValue] = useState({
-    tweets: [],
-    twitterUsers: [],
-    gotTweetsUser: false,
-    gotTweets: false,
-    validated: false,
-    isLoading: false,
-    functionCalled: false,
-    isTweetEditing: false,
-    editigTweetAddress: null,
-    new_topic: '',
-    new_content: '',
-    user_name_editing: false,
-    new_username: ''
+  const [state, setStateValue] = useState({
+    profileType: '',
+    profile: null,
+    isLoggedIn: false,
   });
   const wallet = useWallet();
-  let twitterUsers = [];
-  let tweets = [];
-
   const enqueSnackbar = useSnackbar();
 
   async function getProvider() {
-    /* create the provider and return it to the caller */
-    /* network set to local network for now */
     const network = "http://127.0.0.1:8899";
     const connection = new Connection(network, opts.preflightCommitment);
 
@@ -88,631 +67,266 @@ function App() {
     return provider;
   }
 
-  async function getTwitterUsers() {
-    const provider = await getProvider()
-    /* create the program interface combining the idl, program ID, and provider */
-    console.log(programID.toBase58());
-    const program = new Program(idl, programID, provider);
-    twitterUsers = await program.account.twitterUser.all();
-    console.log('twitter users accounts: ', twitterUsers);
-    if (twitterUsers && twitterUsers.length > 0) {
-      setValue({
-        twitterUsers: twitterUsers,
-        tweets: tweets,
-        gotTweetsUser: true,
-        functionCalled: true,
-        isTweetEditing: false,
-        editigTweetAddress: null,
-        user_name_editing: false,
-        new_username: value.new_username
-      });
-    }
-  }
-
-  async function getTweets() {
-    const provider = await getProvider()
-    /* create the program interface combining the idl, program ID, and provider */
-    console.log(programID.toBase58());
-    const program = new Program(idl, programID, provider);
-    tweets = await program.account.tweet.all();
-    console.log('tweets accounts: ', tweets);
-    if (tweets && tweets.length > 0) {
-      setValue({
-        twitterUsers: twitterUsers,
-        tweets: tweets,
-        gotTweets: true,
-        functionCalled: true,
-        isTweetEditing: false,
-        user_name_editing: false,
-        editigTweetAddress: null,
-        new_topic: '',
-        new_content: '',
-        new_username: value.new_username
-      });
-    }
-  }
-
-  async function getTweetsAndUsers() {
-    getTwitterUsers();
-    getTweets();
-  }
-
-  async function testingFn() {
-    if(!value.functionCalled) {
-      console.log('test');
-      getTweetsAndUsers();
-      setValue({
-        functionCalled: true,
-        isTweetEditing: false,
-        editigTweetAddress: null,
-        user_name_editing: false,
-        twitterUsers: value.twitterUsers,
-        tweets: value.tweets,
-        new_username: value.new_username
-      });
-    }
-  };
-
-  testingFn();
-
-  async function handleSubmit(event) {
-    const form = event.currentTarget;
-    if (form.checkValidity() === false) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    setValue({
-      validated: true,
-      functionCalled: true,
-      isTweetEditing: false,
-      editigTweetAddress: null,
-      user_name_editing: false,
-      new_topic: '',
-      new_content: '',
-      twitterUsers: value.twitterUsers,
-      tweets: value.tweets,
-      new_username: value.new_username
-    })
-  }
-
-  async function sendTweet() {
-    if (value.editigTweetAddress && value.editigTweetAddress.length > 0 && value.isTweetEditing) {
-      for (let i = 0; i < value.tweets.length; i++) {
-        if (value.tweets[i].account.address.toBase58() == value.editigTweetAddress) {
-          updateTweet(value.tweets[i].account.address);
-        }
-      }
-    }
-    else {
-      const provider = await getProvider()
-    /* create the program interface combining the idl, program ID, and provider */
-    console.log(programID.toBase58());
-    const program = new Program(idl, programID, provider);
-    // console.log(value.new_content);
-    // console.log(value.new_topic);
-    let topic = value.new_content;
-    let content = value.new_topic;
-    if (topic && topic.length > 0) {
-      if (content && content.length > 0) {
-        try {
-          setValue({
-            isLoading: true,
-            user_name_editing: false,
-            functionCalled: true,
-            isTweetEditing: false,
-            editigTweetAddress: null,
-            twitterUsers: value.twitterUsers,
-            tweets: value.tweets,
-            new_username: value.new_username
-          });
-          const [userPda,userBump] = await PublicKey.findProgramAddress(
-            [
-              Buffer.from("twitter-user"),
-              provider.wallet.publicKey.toBuffer()
-            ],
-            programID
-          );
-          const twitterUser = await program.account.twitterUser.fetch(userPda);
-          console.log('tweet account: ', twitterUser);
-          const new_keypar = web3.Keypair.generate();
-          const [pda,bump] = await PublicKey.findProgramAddress(
-            [
-              anchor.utils.bytes.utf8.encode("tweet-account"),
-              provider.wallet.publicKey.toBuffer(),
-              new_keypar.publicKey.toBuffer()
-            ],
-            programID
-          );
-          const transaction = new web3.Transaction();
-          const updateAddress = await program.instruction.updateNextAddress(new_keypar.publicKey, {
-            accounts: {
-              author: provider.wallet.publicKey,
-              twitterUser: userPda,
-            }
-          });
-          const account = await program.instruction.sendTweet(topic, content, {
-            accounts: {
-              twitterUser: userPda,
-              tweet: pda,
-              author: provider.wallet.publicKey,
-              systemProgram: web3.SystemProgram.programId,
-            }
-          });
-          // transaction.add(
-          //   await program.rpc.updateNextAddress(new_keypar.publicKey, {
-          //     accounts: {
-          //       author: provider.wallet.publicKey,
-          //       twitterUser: userPda,
-          //     }
-          //   }),
-          //   await program.rpc.sendTweet(topic, content, {
-          //     accounts: {
-          //       twitterUser: userPda,
-          //       tweet: pda,
-          //       author: provider.wallet.publicKey,
-          //       systemProgram: web3.SystemProgram.programId,
-          //     }
-          //   })
-          // );
-          transaction.add(updateAddress);
-          transaction.add(account);
-          const network = "http://127.0.0.1:8899";
-          const connection = new Connection(network, opts.preflightCommitment);
-          const signature = await wallet.sendTransaction(transaction, connection);
-          await connection.confirmTransaction(signature, "processed");
-          getTweetsAndUsers();
-          setValue({
-            isLoading: false,
-            functionCalled: true,
-            twitterUsers: value.twitterUsers,
-            user_name_editing: false,
-            tweets: value.tweets,
-            new_topic: '',
-            new_content: '',
-            isTweetEditing: value.isTweetEditing,
-            editigTweetAddress: value.editigTweetAddress,
-            new_username: value.new_username
-          });
-        } catch (err) {
-          setValue({
-            isLoading: false,
-            functionCalled: true,
-            isTweetEditing: false,
-            editigTweetAddress: null,
-            twitterUsers: value.twitterUsers,
-            tweets: value.tweets,
-            new_topic: '',
-            new_content: '',
-            user_name_editing: false,
-            new_username: value.new_username
-          });
-          console.log("Transaction error: ", err);
-        }
-      }
-      else {
-        toast.error("Content cannot be empty", { position: toast.POSITION.TOP_RIGHT })
-        // enqueSnackbar('Content cannot be empty', { variant: "error" });
-      }
-    }
-    else {
-      toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
-      // enqueSnackbar('Topic cannot be empty', { variant: "error" });
-    }
-    }
-  }
-
-  async function updateAccountKey(user) {
-    setValue({
-      isTweetEditing: true,
-      functionCalled: true,
-      editigTweetAddress: null,
-      new_content: value.new_content,
-      new_topic: value.new_topic,
-      twitterUsers: value.twitterUsers,
-      tweets: value.tweets,
-      user_name_editing: true,
-      new_username: user.account.username
-    });
-  }
-
-  async function justUpdateKey(tweet) {
-    // console.log(tweet);
-    setValue({
-      isTweetEditing: true,
-      functionCalled: true,
-      editigTweetAddress: tweet.account.address.toBase58(),
-      new_content: tweet.account.content,
-      new_topic: tweet.account.topic,
-      twitterUsers: value.twitterUsers,
-      tweets: value.tweets,
-      user_name_editing: false,
-      new_username: value.new_username
-    });
-  }
-
-  async function updateTweet(tweet_public_key) {
-    const provider = await getProvider()
-    /* create the program interface combining the idl, program ID, and provider */
-    console.log(programID.toBase58());
-    const program = new Program(idl, programID, provider);
-    let topic = value.new_content;
-    let content = value.new_topic;
-    if (topic && topic.length > 0) {
-      if (content && content.length > 0) {
-        try {
-          const [userPda,userBump] = await PublicKey.findProgramAddress(
-            [
-              Buffer.from("twitter-user"),
-              provider.wallet.publicKey.toBuffer()
-            ],
-            programID
-          );
-          const twitterUser = await program.account.twitterUser.fetch(userPda);
-          console.log('tweet account: ', twitterUser);
-          const [pda,bump] = await PublicKey.findProgramAddress(
-            [
-              anchor.utils.bytes.utf8.encode("tweet-account"),
-              provider.wallet.publicKey.toBuffer(),
-              tweet_public_key.toBuffer()
-            ],
-            programID
-          );
-          const updateAddress = await program.rpc.updateNextAddress(tweet_public_key, {
-            accounts: {
-              author: provider.wallet.publicKey,
-              twitterUser: userPda,
-            }
-          });
-          const account = await program.rpc.updateTweet(topic, content, {
-            accounts: {
-              twitterUser: userPda,
-              tweet: pda,
-              author: provider.wallet.publicKey
-            }
-          });
-          setValue({
-            isLoading: false,
-            functionCalled: true,
-            isTweetEditing: false,
-            editigTweetAddress: null,
-            twitterUsers: value.twitterUsers,
-            tweets: value.tweets,
-            new_topic: '',
-            new_content: '',
-            user_name_editing: false,
-            new_username: value.new_username
-          })
-          getTweetsAndUsers();
-        } catch (err) {
-          console.log("Transaction error: ", err);
-        }
-      }
-      else {
-        toast.error("Content cannot be empty", { position: toast.POSITION.TOP_RIGHT })
-      }
-    }
-    else {
-      toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
-    }
-    
-  }
-
-  async function deleteTweet(event) {
-    var address = event.target.parentElement.id;
-    for (let i = 0; i < value.tweets.length; i++) {
-      if (value.tweets[i].publicKey.toBase58() == address) {
-        const provider = await getProvider()
-        console.log(programID.toBase58());
-        const program = new Program(idl, programID, provider);
-        try {
-          const [userPda,userBump] = await PublicKey.findProgramAddress(
-            [
-              Buffer.from("twitter-user"),
-              provider.wallet.publicKey.toBuffer()
-            ],
-            programID
-          );
-          const [pda,bump] = await PublicKey.findProgramAddress(
-            [
-              Buffer.from("tweet-account"),
-              provider.wallet.publicKey.toBuffer(),
-              value.tweets[i].publicKey.toBuffer()
-            ],
-            programID
-          );
-          const updateAddress = await program.rpc.updateNextAddress(value.tweets[i].publicKey, {
-            accounts: {
-              author: provider.wallet.publicKey,
-              twitterUser: userPda,
-            }
-          });
-          const account = await program.rpc.deleteTweet({
-            accounts: {
-              twitterUser: userPda,
-              tweet: pda,
-              author: provider.wallet.publicKey
-            }
-          });
-          getTweetsAndUsers();
-        } catch (err) {
-          console.log("Transaction error: ", err);
-        }
-        break;
-      }
-    }
-  }
-
-  async function createAccount() {
-    if (value.user_name_editing) {
-      updateAccount()
-    }
-    else {
-      const provider = await getProvider()
-      console.log(programID.toBase58());
-      const program = new Program(idl, programID, provider);
-      let username = value.new_username;
-      if (username && username.length > 0) {
-        try {
-          const [pda,bump] = await PublicKey.findProgramAddress(
-            [
-              anchor.utils.bytes.utf8.encode("twitter-user"),
-              provider.wallet.publicKey.toBuffer()
-            ],
-            programID
-          );
-          const account = await program.rpc.createTwitterAccount(username,{
-            accounts: {
-              author: provider.wallet.publicKey,
-              twitterUser: pda,
-              systemProgram: web3.SystemProgram.programId,
-            }
-          });
-          getTweetsAndUsers();
-        } catch (err) {
-          console.log("Transaction error: ", err);
-        }
-      }
-      else {
-        toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
-      }
-    }
-  }
-
-  async function changeUsername(event) {
-    setValue({
-      new_topic: event.target.value,
-      functionCalled: true,
-      new_content: value.new_content,
-      twitterUsers: value.twitterUsers,
-      tweets: value.tweets,
-      isTweetEditing: value.isTweetEditing,
-      editigTweetAddress: value.editigTweetAddress,
-      user_name_editing: value.user_name_editing,
-      new_username: event.target.value
-    })
-  }
-
-  async function changeTopic(event) {
-    // console.log(event.target.value);
-    setValue({
-      new_topic: event.target.value,
-      functionCalled: true,
-      new_content: value.new_content,
-      twitterUsers: value.twitterUsers,
-      tweets: value.tweets,
-      isTweetEditing: value.isTweetEditing,
-      editigTweetAddress: value.editigTweetAddress,
-      user_name_editing: false,
-      new_username: value.new_username
-    })
-  }
-
-  async function changeContent(event) {
-    // console.log(event.target.value);
-    setValue({
-      new_content: event.target.value,
-      functionCalled: true,
-      new_topic: value.new_topic,
-      twitterUsers: value.twitterUsers,
-      tweets: value.tweets,
-      isTweetEditing: value.isTweetEditing,
-      user_name_editing: false,
-      editigTweetAddress: value.editigTweetAddress,
-    })
-  }
-
-  async function updateAccount(item) {
+  async function getDoctors() {
     const provider = await getProvider();
-    console.log(item);
-    console.log(provider.wallet.publicKey.toBase58());
     const program = new Program(idl, programID, provider);
-    let username = value.new_username;
-    if (username && username.length > 0) {
-      try {
-        const opts = {
-          preflightCommitment: "processed"
-        }
-        const network = "http://127.0.0.1:8899";
-        const connection = new Connection(network, opts.preflightCommitment);
-        const [pda,bump] = await PublicKey.findProgramAddress(
-          [
-            Buffer.from("twitter-user"),
-            provider.wallet.publicKey.toBuffer()
-          ],
-          programID
-        );
-        const account = await program.rpc.changeUserName(username,{
-          accounts: {
-            author: provider.wallet.publicKey,
-            twitterUser: pda
-          }
-        });
-        getTweetsAndUsers();
-      } catch (err) {
-        console.log("Transaction error: ", err);
-      }
-    }
-    else {
-      toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
-    }
+    const doctorAccounts = await program.account.doctorProfile.all();
+    console.log("Doctor Accounts : ",doctorAccounts);
   }
 
-  async function deleteAccount() {
+  async function getDoctor() {
     const provider = await getProvider()
     console.log(programID.toBase58());
+    let doctorProfile = null;
     const program = new Program(idl, programID, provider);
     try {
-      const [pda,bump] = await PublicKey.findProgramAddress(
+      const [userPda, userBump] = await PublicKey.findProgramAddress(
         [
-          anchor.utils.bytes.utf8.encode("twitter-user"),
+          Buffer.from("doctor-profile"),
           provider.wallet.publicKey.toBuffer()
         ],
         programID
       );
-      const account = await program.rpc.deleteTwitterAccount({
+      doctorProfile = await program.account.doctorProfile.fetch(userPda);
+    } catch {
+      console.log("Error fetching doctor profile")
+    }
+      return doctorProfile ? doctorProfile : null;
+  }
+
+  async function getPatients() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    const patientAccounts = await program.account.patientProfile.all();
+    console.log("Patient Accounts : ",patientAccounts);
+  }
+
+  async function getPatient() {
+    const provider = await getProvider()
+    console.log(programID.toBase58());
+    let profile = null;
+    const program = new Program(idl, programID, provider);
+    try {
+      const [userPda, userBump] = await PublicKey.findProgramAddress(
+        [
+          Buffer.from("patient-profile"),
+          provider.wallet.publicKey.toBuffer()
+        ],
+        programID
+      );
+      profile = await program.account.patientProfile.fetch(userPda);
+    } catch {
+      console.log("Error fetching patient profile")
+    }
+      return profile;
+  }
+
+  async function getTechnicians() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    const technicianAccounts = await program.account.technicianProfile.all();
+    console.log("Technician Accounts : ",technicianAccounts);
+  }
+
+  async function getTechnician() {
+    const provider = await getProvider()
+    console.log(programID.toBase58());
+    let profile = null;
+    const program = new Program(idl, programID, provider);
+    try {
+      const [userPda, userBump] = await PublicKey.findProgramAddress(
+        [
+          Buffer.from("technician-profile"),
+          provider.wallet.publicKey.toBuffer()
+        ],
+        programID
+      );
+      profile = await program.account.technicianProfile.fetch(userPda);
+    } catch {
+      console.log("Error fetching technician profile")
+    }
+      return profile;
+  }
+
+
+  async function getBloodReports() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    const bloodTestReports = await program.account.bloodtestReport.all();
+    console.log("Technician Accounts : ",bloodTestReports);
+  }
+
+  async function getGeneralConsultancy() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    const bloodTestReports = await program.account.generalConsultancy.all();
+    console.log("Technician Accounts : ",bloodTestReports);
+  }
+
+  async function getAllAccounts() {
+    getDoctors();
+    getPatients();
+    getTechnicians();
+    getBloodReports();
+    getGeneralConsultancy();
+  }
+
+  async function getProfileDetails() {
+    let userProfile = null;
+    let userProfileType = '';
+    const profileCheckers = [
+      {type: "specialist", checker: getDoctor},
+      {type: "patient", checker: getPatient},
+      {type: "technician", checker: getTechnician},
+      ];
+    profileCheckers.forEach(checker => {
+      if (!userProfile) {
+        const profile = checker.checker();
+        if (profile) {
+          userProfileType = checker.type;
+          userProfile = profile;
+        }
+      }
+    });
+    if (userProfile) {
+      setStateValue({...state, profile: userProfile, profileType: userProfileType, isLoggedIn: true})
+    }
+  };
+
+  async function createDoctorAccount() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    var new_keypar = web3.Keypair.generate();
+    try {
+      const [newDoctorPda,newDoctorBump] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("doctor-profile"),
+          provider.wallet.publicKey.toBuffer()
+        ],
+        programID
+      );
+      let gc_fee_bn = new anchor.BN(500);
+      let time = new anchor.BN(Date.now() / 1000);
+      const doctor_profile = await program.rpc.initDoctorProfile('Bhargav','Male','09/03/1995',60,gc_fee_bn,true,time,{
         accounts: {
-          twitterUser: pda,
-          author: provider.wallet.publicKey
+          doctorProfile: newDoctorPda,
+          doctor: provider.wallet.publicKey,
+          systemProgram: web3.SystemProgram.programId
         }
       });
-      getTweetsAndUsers();
-    } catch (err) {
-      console.log("Transaction error: ", err);
+      getDoctors();
+    } catch (error) {
+      
     }
   }
 
-  if (!wallet.connected) {
-    /* If the user's wallet is not connected, display connect wallet button. */
-    return ( 
-      <div style = {
-        {
-          display: 'flex',
-          justifyContent: 'center',
-          marginTop: '100px'
+  async function createPatientAccount() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    var new_keypar = web3.Keypair.generate();
+    try {
+      const [newPatientPda,newPatientBump] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("patient-profile"),
+          provider.wallet.publicKey.toBuffer()
+        ],
+        programID
+      );
+      const patient_profile = await program.rpc.initPatientProfile('Vamshi','Male','05/03/1995',{
+        accounts: {
+          patientProfile: newPatientPda,
+          patient: provider.wallet.publicKey,
+          systemProgram: web3.SystemProgram.programId
         }
-      } >
-      <WalletMultiButton />
-      </div>
-    )
+      });
+      getPatients();
+    } catch (error) {
+      
+    }
+  }
+
+  async function createTechinicianAccount() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    var new_keypar = web3.Keypair.generate();
+    try {
+      const [newTechnicianPda,newDoctorBump] = await PublicKey.findProgramAddress(
+        [
+          anchor.utils.bytes.utf8.encode("technician-profile"),
+          provider.wallet.publicKey.toBuffer()
+        ],
+        programID
+      );
+      let gc_fee_bn = new anchor.BN(500);
+      let time = new anchor.BN(Date.now() / 1000);
+      const technician_profile = await program.rpc.initTechnicianProfile('Vamshi','Male','05/03/1995',60,gc_fee_bn,true,time,{
+        accounts: {
+          technicianProfile: newTechnicianPda,
+          technician: provider.wallet.publicKey,
+          systemProgram: web3.SystemProgram.programId
+        }
+      });
+      getTechnicians();
+    }
+    catch {
+
+    }
+    
+  }
+
+  async function createBloodTestBooking() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    var new_keypar = web3.Keypair.generate();
+    const [bloodTestPda,bloodTestBump] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("bloodtest-report"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      programID
+    );
+    const patientAccounts = await program.account.patientProfile.all();
+    const technicianAccounts = await program.account.technicianProfile.all();
+    const [patientPda,patientBump] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("bloodtest-report"),
+        patientAccounts[0].publicKey.toBuffer()
+      ],
+      programID
+    );
+    const [technicianPda,technicianBump] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("technician-profile"),
+        technicianAccounts[0].publicKey.toBuffer()
+      ],
+      programID
+    );
+    const blood_test_booking = await program.rpc.initBloodtestBooking({
+      accounts: {
+        bloodtestReport: bloodTestPda,
+        patientProfile: patientPda,
+        technicianProfile: technicianPda,
+        patientDepositTokenAccount: '',
+        uhwDaoWallet: '',
+        patient: '',
+        systemProgram: web3.SystemProgram.programId,
+        tokenProgram: ''
+      }
+    })
+  }
+
+  if (wallet.connected && state.isLoggedIn) {
+    return(<div>Welcome to dashboard</div>)
   } else {
     return ( 
-
-      <div className = "App" >
-        <div className='Main-header'> 
-          <h2 className='pull-left full-width text-center'>Twitter on Solana</h2>
-        </div> 
-        {
-          value && (
-            <div className='Main-body'>
-              <Row>
-                <Col xs={12} md={4} sm={4}>
-                  <div className='Twitter-Users-box'>
-                    {/* <h3 className='pull-left full-width text-center'>Twitter Users</h3> */}
-                    <ul>
-                      {(value.twitterUsers && value.twitterUsers.length > 0) && (
-                        value.twitterUsers.map(function(user) {
-                          return (
-                            <li>
-                              <label>
-                                <span className='username'>{user.account.username}</span>
-                                <span className='user-actions'><FontAwesomeIcon title='Delete User Account' className='pull-right fs-12 m-l-10 m-t-4 pointer' onClick={deleteAccount} icon={solid('trash')} /><FontAwesomeIcon title='Update User Account' className='pull-right fs-12 m-t-4 pointer' onClick={() => updateAccountKey(user)} icon={solid('pencil')} /></span>
-                              </label>
-                              <p><FontAwesomeIcon title='Wallet Address' className='m-r-5 fs-12 pull-left m-t-2' icon={solid('wallet')}></FontAwesomeIcon><span className='pull-left wallet-address-part'>{user.publicKey.toBase58()}</span></p>
-                            </li>
-                          );
-                        })
-                      )}
-                    </ul>
-                    {((!value.twitterUsers || value.twitterUsers.length == 0) || value.user_name_editing) && (
-                      <div class="pull-left full-width text-center">
-                        <Form onSubmit={handleSubmit} validated={value.validated}>
-                          <Form.Group as={Col} md="12" sm="12" xs="12" className='pull-left padding-6' controlId="username">
-                            {/* <Form.Label>Topic</Form.Label> */}
-                            <Form.Control
-                              required
-                              type="text"
-                              placeholder="Username"
-                              defaultValue={value.new_username}
-                              onChange={changeUsername}
-                            />
-                            <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
-                          </Form.Group>
-                        </Form>
-                        <Button onClick={createAccount} variant="info" className='m-t-10 m-b-10'>{value.user_name_editing ? 'Update User Account' : 'Create New User Account'}</Button>
-                      </div>
-                    )}
-                  </div>
-                </Col>
-                <Col xs={12} md={8} sm={8}>
-                  <div className='Twitter-Tweets-box'>
-                  {/* <h3 className='pull-left full-width text-center'>Tweets</h3> */}
-                  <ul>
-                      {(value.tweets && value.tweets.length > 0) && (
-                        value.tweets.map(function(tweet) {
-                          return (
-                            <li className={tweet.account.address.toBase58() == value.editigTweetAddress ? 'editing-now': ''}>
-                              <label>
-                                <span className='username'>{tweet.account.topic}</span>
-                                <span className='user-actions'><FontAwesomeIcon title='Delete Tweet' className='pull-right fs-12 m-l-10 m-t-4 pointer' id={tweet.publicKey.toBase58()} onClick={deleteTweet} icon={solid('trash')} /><FontAwesomeIcon title='Update Tweet' className='pull-right fs-12 m-t-4 pointer' onClick={() => justUpdateKey(tweet)} icon={solid('pencil')} /></span>
-                                <span className='pull-left full-width'>{tweet.account.content}</span>
-                              </label>
-                              <p><FontAwesomeIcon title='Wallet Address' className='m-r-5 fs-12 pull-left m-t-2' icon={solid('wallet')}></FontAwesomeIcon><span className='pull-left wallet-address-part'>{tweet.publicKey.toBase58()}</span></p>
-                            </li>
-                          );
-                        })
-                      )}
-                    </ul>
-                    {(value.twitterUsers && value.twitterUsers.length > 0) && (
-                      <div class="pull-left full-width text-center border b-b-0">
-                        <Form onSubmit={handleSubmit} validated={value.validated}>
-                          <Form.Group as={Col} md="6" sm="6" xs="12" className='pull-left padding-6' controlId="new_topic">
-                            {/* <Form.Label>Topic</Form.Label> */}
-                            <Form.Control
-                              required
-                              type="text"
-                              placeholder="Topic"
-                              as="textarea" 
-                              rows={2}
-                              defaultValue={value.new_topic}
-                              onChange={changeTopic}
-                            />
-                            <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
-                          </Form.Group>
-                          <Form.Group as={Col} md="6" sm="6" xs="12" className='pull-left padding-6' controlId="new_content">
-                            {/* <Form.Label>Content</Form.Label> */}
-                            <Form.Control
-                              required
-                              type="text"
-                              placeholder="Content"
-                              as="textarea" 
-                              rows={2}
-                              defaultValue={value.new_content}
-                              onChange={changeContent}
-                            />
-                            <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
-                          </Form.Group>
-                        </Form>
-                        <Button onClick={sendTweet} disabled={value.isLoading} variant="info" className='m-t-10 m-b-10'>{value.isLoading ? 'Sending…' : value.isTweetEditing ? 'Update Tweet' : 'Send Tweet'}</Button>
-                      </div>
-                    )}
-                  </div>
-                </Col>
-              </Row>
-            </div>
-          )
-        }
-      </div>
-      );
+      <HomePage wallet={wallet} />
+    )
     }
   }
 
-  /* wallet configuration as specified here: https://github.com/solana-labs/wallet-adapter#setup */
   const AppWithProvider = () => ( 
     <ConnectionProvider endpoint = "http://127.0.0.1:8899" >
-    <WalletProvider wallets = {
-      wallets
-    }
-    autoConnect >
+    <WalletProvider wallets={wallets} autoConnect >
     <WalletModalProvider >
     <App />
     </WalletModalProvider> </WalletProvider> </ConnectionProvider>
