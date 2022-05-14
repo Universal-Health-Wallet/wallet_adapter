@@ -66,7 +66,9 @@ function App() {
     isTweetEditing: false,
     editigTweetAddress: null,
     new_topic: '',
-    new_content: ''
+    new_content: '',
+    user_name_editing: false,
+    new_username: ''
   });
   const wallet = useWallet();
   let twitterUsers = [];
@@ -100,7 +102,9 @@ function App() {
         gotTweetsUser: true,
         functionCalled: true,
         isTweetEditing: false,
-        editigTweetAddress: null
+        editigTweetAddress: null,
+        user_name_editing: false,
+        new_username: value.new_username
       });
     }
   }
@@ -119,37 +123,37 @@ function App() {
         gotTweets: true,
         functionCalled: true,
         isTweetEditing: false,
+        user_name_editing: false,
         editigTweetAddress: null,
         new_topic: '',
-        new_content: ''
+        new_content: '',
+        new_username: value.new_username
       });
     }
   }
 
   async function getTweetsAndUsers() {
-    if(!value.functionCalled) {
-      console.log('test');
-      getTwitterUsers();
-      getTweets();
-      setValue({
-        functionCalled: true
-      });
-    }
+    getTwitterUsers();
+    getTweets();
   }
 
-  // async function testingFn() {
-  //   if(!value.functionCalled) {
-  //     console.log('test');
-  //     getTweetsAndUsers();
-  //     setValue({
-  //       functionCalled: true,
-  //       isTweetEditing: false,
-  //       editigTweetAddress: null
-  //     });
-  //   }
-  // };
+  async function testingFn() {
+    if(!value.functionCalled) {
+      console.log('test');
+      getTweetsAndUsers();
+      setValue({
+        functionCalled: true,
+        isTweetEditing: false,
+        editigTweetAddress: null,
+        user_name_editing: false,
+        twitterUsers: value.twitterUsers,
+        tweets: value.tweets,
+        new_username: value.new_username
+      });
+    }
+  };
 
-  getTweetsAndUsers();
+  testingFn();
 
   async function handleSubmit(event) {
     const form = event.currentTarget;
@@ -162,28 +166,44 @@ function App() {
       functionCalled: true,
       isTweetEditing: false,
       editigTweetAddress: null,
+      user_name_editing: false,
       new_topic: '',
-      new_content: ''
+      new_content: '',
+      twitterUsers: value.twitterUsers,
+      tweets: value.tweets,
+      new_username: value.new_username
     })
   }
 
   async function sendTweet() {
-    const provider = await getProvider()
+    if (value.editigTweetAddress && value.editigTweetAddress.length > 0 && value.isTweetEditing) {
+      for (let i = 0; i < value.tweets.length; i++) {
+        if (value.tweets[i].account.address.toBase58() == value.editigTweetAddress) {
+          updateTweet(value.tweets[i].account.address);
+        }
+      }
+    }
+    else {
+      const provider = await getProvider()
     /* create the program interface combining the idl, program ID, and provider */
     console.log(programID.toBase58());
     const program = new Program(idl, programID, provider);
-    console.log(value.new_content);
-    console.log(value.new_topic);
-    let topic = document.getElementById('new_topic').value;
-    let content = document.getElementById('new_content').value;
+    // console.log(value.new_content);
+    // console.log(value.new_topic);
+    let topic = value.new_content;
+    let content = value.new_topic;
     if (topic && topic.length > 0) {
       if (content && content.length > 0) {
         try {
           setValue({
             isLoading: true,
+            user_name_editing: false,
             functionCalled: true,
             isTweetEditing: false,
-            editigTweetAddress: null
+            editigTweetAddress: null,
+            twitterUsers: value.twitterUsers,
+            tweets: value.tweets,
+            new_username: value.new_username
           });
           const [userPda,userBump] = await PublicKey.findProgramAddress(
             [
@@ -243,14 +263,28 @@ function App() {
           getTweetsAndUsers();
           setValue({
             isLoading: false,
-            functionCalled: true
+            functionCalled: true,
+            twitterUsers: value.twitterUsers,
+            user_name_editing: false,
+            tweets: value.tweets,
+            new_topic: '',
+            new_content: '',
+            isTweetEditing: value.isTweetEditing,
+            editigTweetAddress: value.editigTweetAddress,
+            new_username: value.new_username
           });
         } catch (err) {
           setValue({
             isLoading: false,
             functionCalled: true,
             isTweetEditing: false,
-            editigTweetAddress: null
+            editigTweetAddress: null,
+            twitterUsers: value.twitterUsers,
+            tweets: value.tweets,
+            new_topic: '',
+            new_content: '',
+            user_name_editing: false,
+            new_username: value.new_username
           });
           console.log("Transaction error: ", err);
         }
@@ -264,158 +298,227 @@ function App() {
       toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
       // enqueSnackbar('Topic cannot be empty', { variant: "error" });
     }
-    
+    }
   }
 
-  async function justUpdateKey(tweet) {
-    console.log(tweet);
+  async function updateAccountKey(user) {
     setValue({
-      isEditing: true,
-      editigTweetAddress: tweet.account.address.toBase58(),
-      new_content: tweet.account.content,
-      new_topic: tweet.account.topic
+      isTweetEditing: true,
+      functionCalled: true,
+      editigTweetAddress: null,
+      new_content: value.new_content,
+      new_topic: value.new_topic,
+      twitterUsers: value.twitterUsers,
+      tweets: value.tweets,
+      user_name_editing: true,
+      new_username: user.account.username
     });
   }
 
-  async function updateTweet() {
+  async function justUpdateKey(tweet) {
+    // console.log(tweet);
+    setValue({
+      isTweetEditing: true,
+      functionCalled: true,
+      editigTweetAddress: tweet.account.address.toBase58(),
+      new_content: tweet.account.content,
+      new_topic: tweet.account.topic,
+      twitterUsers: value.twitterUsers,
+      tweets: value.tweets,
+      user_name_editing: false,
+      new_username: value.new_username
+    });
+  }
+
+  async function updateTweet(tweet_public_key) {
     const provider = await getProvider()
     /* create the program interface combining the idl, program ID, and provider */
     console.log(programID.toBase58());
     const program = new Program(idl, programID, provider);
-    try {
-      const [userPda,userBump] = await PublicKey.findProgramAddress(
-        [
-          Buffer.from("twitter-user"),
-          provider.wallet.publicKey.toBuffer()
-        ],
-        programID
-      );
-      const twitterUser = await program.account.twitterUser.fetch(userPda);
-      console.log('tweet account: ', twitterUser);
-      let tweets = await program.account.tweet.all();
-      console.log('tweet account: ', tweets);
-      // console.log(Uint8Array.from(parseInt(twittercount.toString())));
-      const [pda,bump] = await PublicKey.findProgramAddress(
-        [
-          anchor.utils.bytes.utf8.encode("tweet-account"),
-          provider.wallet.publicKey.toBuffer(),
-          tweets[0].account.address.toBuffer()
-        ],
-        programID
-      );
-      // const [pda,bump] = await PublicKey.findProgramAddress(
-      //   [
-      //     anchor.utils.bytes.utf8.encode("tweet-account"),
-      //     provider.wallet.publicKey.toBuffer(),
-      //     tweetAccounts2[0].publicKey.toBuffer()
-      //   ],
-      //   programID
-      // );
-      const updateAddress = await program.rpc.updateNextAddress(tweets[0].account.address, {
-        accounts: {
-          author: provider.wallet.publicKey,
-          twitterUser: userPda,
+    let topic = value.new_content;
+    let content = value.new_topic;
+    if (topic && topic.length > 0) {
+      if (content && content.length > 0) {
+        try {
+          const [userPda,userBump] = await PublicKey.findProgramAddress(
+            [
+              Buffer.from("twitter-user"),
+              provider.wallet.publicKey.toBuffer()
+            ],
+            programID
+          );
+          const twitterUser = await program.account.twitterUser.fetch(userPda);
+          console.log('tweet account: ', twitterUser);
+          const [pda,bump] = await PublicKey.findProgramAddress(
+            [
+              anchor.utils.bytes.utf8.encode("tweet-account"),
+              provider.wallet.publicKey.toBuffer(),
+              tweet_public_key.toBuffer()
+            ],
+            programID
+          );
+          const updateAddress = await program.rpc.updateNextAddress(tweet_public_key, {
+            accounts: {
+              author: provider.wallet.publicKey,
+              twitterUser: userPda,
+            }
+          });
+          const account = await program.rpc.updateTweet(topic, content, {
+            accounts: {
+              twitterUser: userPda,
+              tweet: pda,
+              author: provider.wallet.publicKey
+            }
+          });
+          setValue({
+            isLoading: false,
+            functionCalled: true,
+            isTweetEditing: false,
+            editigTweetAddress: null,
+            twitterUsers: value.twitterUsers,
+            tweets: value.tweets,
+            new_topic: '',
+            new_content: '',
+            user_name_editing: false,
+            new_username: value.new_username
+          })
+          getTweetsAndUsers();
+        } catch (err) {
+          console.log("Transaction error: ", err);
         }
-      });
-      // const tweets = await program.account.tweet.all();
-      // const tweetAccounts = await program.account.tweet.fetch(pda);
-      // console.log('tweet account: ', tweets);
-      const account = await program.rpc.updateTweet('Edited Tweet。', 'First/Second tweet through bloackchain', {
-        accounts: {
-          twitterUser: userPda,
-          tweet: pda,
-          author: provider.wallet.publicKey
-        }
-      });
-      const tweetAccounts1 = await program.account.tweet.all();
-      console.log('tweet account: ', tweetAccounts1);
-      getTweetsAndUsers();
-    } catch (err) {
-      console.log("Transaction error: ", err);
+      }
+      else {
+        toast.error("Content cannot be empty", { position: toast.POSITION.TOP_RIGHT })
+      }
     }
+    else {
+      toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
+    }
+    
   }
 
-  async function deleteTweet() {
-    const provider = await getProvider()
-    console.log(programID.toBase58());
-    const program = new Program(idl, programID, provider);
-    try {
-      const [userPda,userBump] = await PublicKey.findProgramAddress(
-        [
-          Buffer.from("twitter-user"),
-          provider.wallet.publicKey.toBuffer()
-        ],
-        programID
-      );
-      const twitterUser = await program.account.twitterUser.fetch(userPda);
-      console.log('tweet account: ', twitterUser);
-      let tweets = await program.account.tweet.all();
-      console.log('tweet account: ', tweets);
-      // console.log(Uint8Array.from(parseInt(twittercount.toString())));
-      const [pda,bump] = await PublicKey.findProgramAddress(
-        [
-          Buffer.from("tweet-account"),
-          provider.wallet.publicKey.toBuffer(),
-          tweets[0].account.address.toBuffer()
-        ],
-        programID
-      );
-      // const [pda,bump] = await PublicKey.findProgramAddress(
-      //   [
-      //     anchor.utils.bytes.utf8.encode("tweet-account"),
-      //     provider.wallet.publicKey.toBuffer(),
-      //     tweetAccounts2[0].publicKey.toBuffer()
-      //   ],
-      //   programID
-      // );
-      const updateAddress = await program.rpc.updateNextAddress(tweets[0].account.address, {
-        accounts: {
-          author: provider.wallet.publicKey,
-          twitterUser: userPda,
+  async function deleteTweet(event) {
+    var address = event.target.parentElement.id;
+    for (let i = 0; i < value.tweets.length; i++) {
+      if (value.tweets[i].publicKey.toBase58() == address) {
+        const provider = await getProvider()
+        console.log(programID.toBase58());
+        const program = new Program(idl, programID, provider);
+        try {
+          const [userPda,userBump] = await PublicKey.findProgramAddress(
+            [
+              Buffer.from("twitter-user"),
+              provider.wallet.publicKey.toBuffer()
+            ],
+            programID
+          );
+          const [pda,bump] = await PublicKey.findProgramAddress(
+            [
+              Buffer.from("tweet-account"),
+              provider.wallet.publicKey.toBuffer(),
+              value.tweets[i].publicKey.toBuffer()
+            ],
+            programID
+          );
+          const updateAddress = await program.rpc.updateNextAddress(value.tweets[i].publicKey, {
+            accounts: {
+              author: provider.wallet.publicKey,
+              twitterUser: userPda,
+            }
+          });
+          const account = await program.rpc.deleteTweet({
+            accounts: {
+              twitterUser: userPda,
+              tweet: pda,
+              author: provider.wallet.publicKey
+            }
+          });
+          getTweetsAndUsers();
+        } catch (err) {
+          console.log("Transaction error: ", err);
         }
-      });
-      // const tweets = await program.account.tweet.all();
-      // const tweetAccounts = await program.account.tweet.fetch(pda);
-      // console.log('tweet account: ', tweets);
-      const account = await program.rpc.deleteTweet({
-        accounts: {
-          twitterUser: userPda,
-          tweet: pda,
-          author: provider.wallet.publicKey
-        }
-      });
-      console.log("signature",account)
-      const tweetAccounts1 = await program.account.tweet.all();
-      console.log('tweet account: ', tweetAccounts1);
-      getTweetsAndUsers();
-    } catch (err) {
-      console.log("Transaction error: ", err);
+        break;
+      }
     }
   }
 
   async function createAccount() {
-    const provider = await getProvider()
-    console.log(programID.toBase58());
-    const program = new Program(idl, programID, provider);
-    try {
-      const [pda,bump] = await PublicKey.findProgramAddress(
-        [
-          anchor.utils.bytes.utf8.encode("twitter-user"),
-          provider.wallet.publicKey.toBuffer()
-        ],
-        programID
-      );
-      const account = await program.rpc.createTwitterAccount("vamsi",{
-        accounts: {
-          author: provider.wallet.publicKey,
-          twitterUser: pda,
-          systemProgram: web3.SystemProgram.programId,
-        }
-      });
-      getTweetsAndUsers();
-    } catch (err) {
-      console.log("Transaction error: ", err);
+    if (value.user_name_editing) {
+      updateAccount()
     }
+    else {
+      const provider = await getProvider()
+      console.log(programID.toBase58());
+      const program = new Program(idl, programID, provider);
+      let username = value.new_username;
+      if (username && username.length > 0) {
+        try {
+          const [pda,bump] = await PublicKey.findProgramAddress(
+            [
+              anchor.utils.bytes.utf8.encode("twitter-user"),
+              provider.wallet.publicKey.toBuffer()
+            ],
+            programID
+          );
+          const account = await program.rpc.createTwitterAccount(username,{
+            accounts: {
+              author: provider.wallet.publicKey,
+              twitterUser: pda,
+              systemProgram: web3.SystemProgram.programId,
+            }
+          });
+          getTweetsAndUsers();
+        } catch (err) {
+          console.log("Transaction error: ", err);
+        }
+      }
+      else {
+        toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
+      }
+    }
+  }
+
+  async function changeUsername(event) {
+    setValue({
+      new_topic: event.target.value,
+      functionCalled: true,
+      new_content: value.new_content,
+      twitterUsers: value.twitterUsers,
+      tweets: value.tweets,
+      isTweetEditing: value.isTweetEditing,
+      editigTweetAddress: value.editigTweetAddress,
+      user_name_editing: value.user_name_editing,
+      new_username: event.target.value
+    })
+  }
+
+  async function changeTopic(event) {
+    // console.log(event.target.value);
+    setValue({
+      new_topic: event.target.value,
+      functionCalled: true,
+      new_content: value.new_content,
+      twitterUsers: value.twitterUsers,
+      tweets: value.tweets,
+      isTweetEditing: value.isTweetEditing,
+      editigTweetAddress: value.editigTweetAddress,
+      user_name_editing: false,
+      new_username: value.new_username
+    })
+  }
+
+  async function changeContent(event) {
+    // console.log(event.target.value);
+    setValue({
+      new_content: event.target.value,
+      functionCalled: true,
+      new_topic: value.new_topic,
+      twitterUsers: value.twitterUsers,
+      tweets: value.tweets,
+      isTweetEditing: value.isTweetEditing,
+      user_name_editing: false,
+      editigTweetAddress: value.editigTweetAddress,
+    })
   }
 
   async function updateAccount(item) {
@@ -423,28 +526,34 @@ function App() {
     console.log(item);
     console.log(provider.wallet.publicKey.toBase58());
     const program = new Program(idl, programID, provider);
-    try {
-      const opts = {
-        preflightCommitment: "processed"
-      }
-      const network = "http://127.0.0.1:8899";
-      const connection = new Connection(network, opts.preflightCommitment);
-      const [pda,bump] = await PublicKey.findProgramAddress(
-        [
-          Buffer.from("twitter-user"),
-          provider.wallet.publicKey.toBuffer()
-        ],
-        programID
-      );
-      const account = await program.rpc.changeUserName("mcnole",{
-        accounts: {
-          author: provider.wallet.publicKey,
-          twitterUser: pda
+    let username = value.new_username;
+    if (username && username.length > 0) {
+      try {
+        const opts = {
+          preflightCommitment: "processed"
         }
-      });
-      getTweetsAndUsers();
-    } catch (err) {
-      console.log("Transaction error: ", err);
+        const network = "http://127.0.0.1:8899";
+        const connection = new Connection(network, opts.preflightCommitment);
+        const [pda,bump] = await PublicKey.findProgramAddress(
+          [
+            Buffer.from("twitter-user"),
+            provider.wallet.publicKey.toBuffer()
+          ],
+          programID
+        );
+        const account = await program.rpc.changeUserName(username,{
+          accounts: {
+            author: provider.wallet.publicKey,
+            twitterUser: pda
+          }
+        });
+        getTweetsAndUsers();
+      } catch (err) {
+        console.log("Transaction error: ", err);
+      }
+    }
+    else {
+      toast.error("Topic cannot be empty", { position: toast.POSITION.TOP_RIGHT })
     }
   }
 
@@ -490,7 +599,7 @@ function App() {
 
       <div className = "App" >
         <div className='Main-header'> 
-          {value && !value.gotTweetsUser && !value.gotTweets && ( <Button onClick={getTweetsAndUsers}>Get Tweets and Users</Button>)}
+          <h2 className='pull-left full-width text-center'>Twitter on Solana</h2>
         </div> 
         {
           value && (
@@ -498,7 +607,7 @@ function App() {
               <Row>
                 <Col xs={12} md={4} sm={4}>
                   <div className='Twitter-Users-box'>
-                    <h3 className='pull-left full-width text-center'>Twitter Users</h3>
+                    {/* <h3 className='pull-left full-width text-center'>Twitter Users</h3> */}
                     <ul>
                       {(value.twitterUsers && value.twitterUsers.length > 0) && (
                         value.twitterUsers.map(function(user) {
@@ -506,67 +615,84 @@ function App() {
                             <li>
                               <label>
                                 <span className='username'>{user.account.username}</span>
-                                <span className='user-actions'><FontAwesomeIcon className='pull-right fs-12 m-l-10 m-t-4' onClick={deleteAccount} icon={solid('trash')} /><FontAwesomeIcon className='pull-right fs-12 m-t-4' onClick={updateAccount} icon={solid('pencil')} /></span>
+                                <span className='user-actions'><FontAwesomeIcon title='Delete User Account' className='pull-right fs-12 m-l-10 m-t-4 pointer' onClick={deleteAccount} icon={solid('trash')} /><FontAwesomeIcon title='Update User Account' className='pull-right fs-12 m-t-4 pointer' onClick={() => updateAccountKey(user)} icon={solid('pencil')} /></span>
                               </label>
-                              <p>{user.publicKey.toBase58()}</p>
+                              <p><FontAwesomeIcon title='Wallet Address' className='m-r-5 fs-12 pull-left m-t-2' icon={solid('wallet')}></FontAwesomeIcon><span className='pull-left wallet-address-part'>{user.publicKey.toBase58()}</span></p>
                             </li>
                           );
                         })
                       )}
                     </ul>
-                    {(!value.twitterUsers || value.twitterUsers.length == 0) && (
+                    {((!value.twitterUsers || value.twitterUsers.length == 0) || value.user_name_editing) && (
                       <div class="pull-left full-width text-center">
-                        <Button onClick={createAccount} variant="info" className='m-t-10 m-b-10'>Create New User Account</Button>
+                        <Form onSubmit={handleSubmit} validated={value.validated}>
+                          <Form.Group as={Col} md="12" sm="12" xs="12" className='pull-left padding-6' controlId="username">
+                            {/* <Form.Label>Topic</Form.Label> */}
+                            <Form.Control
+                              required
+                              type="text"
+                              placeholder="Username"
+                              defaultValue={value.new_username}
+                              onChange={changeUsername}
+                            />
+                            <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
+                          </Form.Group>
+                        </Form>
+                        <Button onClick={createAccount} variant="info" className='m-t-10 m-b-10'>{value.user_name_editing ? 'Update User Account' : 'Create New User Account'}</Button>
                       </div>
                     )}
                   </div>
                 </Col>
                 <Col xs={12} md={8} sm={8}>
                   <div className='Twitter-Tweets-box'>
-                  <h3 className='pull-left full-width text-center'>Tweets</h3>
+                  {/* <h3 className='pull-left full-width text-center'>Tweets</h3> */}
                   <ul>
                       {(value.tweets && value.tweets.length > 0) && (
                         value.tweets.map(function(tweet) {
                           return (
-                            <li className={tweet.isEditing ? 'editign-now': ''}>
+                            <li className={tweet.account.address.toBase58() == value.editigTweetAddress ? 'editing-now': ''}>
                               <label>
                                 <span className='username'>{tweet.account.topic}</span>
-                                <span className='user-actions'><FontAwesomeIcon className='pull-right fs-12 m-l-10 m-t-4' onClick={deleteTweet} icon={solid('trash')} /><FontAwesomeIcon className='pull-right fs-12 m-t-4' onClick={() => justUpdateKey(tweet)} icon={solid('pencil')} /></span>
+                                <span className='user-actions'><FontAwesomeIcon title='Delete Tweet' className='pull-right fs-12 m-l-10 m-t-4 pointer' id={tweet.publicKey.toBase58()} onClick={deleteTweet} icon={solid('trash')} /><FontAwesomeIcon title='Update Tweet' className='pull-right fs-12 m-t-4 pointer' onClick={() => justUpdateKey(tweet)} icon={solid('pencil')} /></span>
                                 <span className='pull-left full-width'>{tweet.account.content}</span>
                               </label>
-                              <p>{tweet.publicKey.toBase58()}</p>
+                              <p><FontAwesomeIcon title='Wallet Address' className='m-r-5 fs-12 pull-left m-t-2' icon={solid('wallet')}></FontAwesomeIcon><span className='pull-left wallet-address-part'>{tweet.publicKey.toBase58()}</span></p>
                             </li>
                           );
                         })
                       )}
                     </ul>
                     {(value.twitterUsers && value.twitterUsers.length > 0) && (
-                      <div class="pull-left full-width text-center">
+                      <div class="pull-left full-width text-center border b-b-0">
                         <Form onSubmit={handleSubmit} validated={value.validated}>
-                          <Form.Group as={Col} md="12" controlId="new_topic">
-                            <Form.Label>Topic</Form.Label>
+                          <Form.Group as={Col} md="6" sm="6" xs="12" className='pull-left padding-6' controlId="new_topic">
+                            {/* <Form.Label>Topic</Form.Label> */}
                             <Form.Control
                               required
                               type="text"
                               placeholder="Topic"
-                              value={value.new_topic}
-                              onChange={() => changingInputs(value.new_content,2)}
+                              as="textarea" 
+                              rows={2}
+                              defaultValue={value.new_topic}
+                              onChange={changeTopic}
                             />
                             <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
                           </Form.Group>
-                          <Form.Group as={Col} md="12" controlId="new_content">
-                            <Form.Label>Content</Form.Label>
+                          <Form.Group as={Col} md="6" sm="6" xs="12" className='pull-left padding-6' controlId="new_content">
+                            {/* <Form.Label>Content</Form.Label> */}
                             <Form.Control
                               required
                               type="text"
                               placeholder="Content"
-                              value={value.new_content}
-                              onChange={() => changingInputs(value.new_content,2)}
+                              as="textarea" 
+                              rows={2}
+                              defaultValue={value.new_content}
+                              onChange={changeContent}
                             />
                             <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
                           </Form.Group>
                         </Form>
-                        <Button onClick={sendTweet} disabled={value.isLoading} variant="info" className='m-t-10 m-b-10'>{value.isLoading ? 'Sending…' : value.isEditing ? 'Update Tweet' : 'Send Tweet'}</Button>
+                        <Button onClick={sendTweet} disabled={value.isLoading} variant="info" className='m-t-10 m-b-10'>{value.isLoading ? 'Sending…' : value.isTweetEditing ? 'Update Tweet' : 'Send Tweet'}</Button>
                       </div>
                     )}
                   </div>

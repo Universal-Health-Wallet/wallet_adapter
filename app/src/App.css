@@ -6,7 +6,7 @@
   float: left;
   width: 100%;
   padding: 10px;
-  height: calc(100vh - 160px);
+  /* height: calc(100vh - 160px); */
   /* height: calc(100vh - 200px); */
 }
 
@@ -15,19 +15,55 @@
   width: 100%;
   font-size: 14px;
   background-color: white;
-  font-family: Cambria,Cochin,Georgia,Times,"Times New Roman",serif;
+  font-family: Cambria, sans-serif;
   padding-left: 0;
   height: 100%;
   padding: 6px;
   list-style: none;
 }
 
+.wallet-address-part {
+  float: left;
+  width: calc(100% - 30px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-x: hidden;
+  max-width: calc(100% - 30px);
+  cursor: pointer;
+}
+
+.form-control {
+  border: 1px solid #ebeef1 !important;
+  font-size: 14px;
+}
+
+.m-r-5 {
+  margin-right: 5px;
+}
+
+.m-t-2 {
+  margin-top: 2px;
+}
+
+.border {
+  border: 1px solid lightgray;
+}
+
+.b-b-0 {
+  border-bottom: 0 !important;
+}
+
 .Twitter-Tweets-box {
   float: left;
   width: 100%;
   padding: 10px;
-  height: calc(100vh - 160px);
+  height: calc(100vh - 60px);
   /* height: calc(100vh - 200px); */
+}
+
+.editing-now {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .Twitter-Tweets-box>ul {
@@ -35,12 +71,13 @@
   width: 100%;
   font-size: 14px;
   background-color: white;
-  font-family: Cambria,Cochin,Georgia,Times,"Times New Roman",serif;
+  font-family: Cambria, sans-serif;
   padding-left: 0;
   padding: 6px;
   list-style: none;
-  max-height: calc(100% - 200px);
+  max-height: calc(100% - 125px);
   overflow-y: scroll;
+  margin-bottom: 0;
 }
 
 .pull-right {
@@ -53,6 +90,8 @@
   overflow-x: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .m-t-4 {
@@ -80,11 +119,15 @@
   border-radius: 6px;
   padding: 8px;
   margin-bottom: 5px;
-  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1pt 6pt rgb(0 0 0 / 15%);
   background-color: white;
   color: black;
   float: left;
   width: 100%;
+}
+
+.Twitter-Users-box>ul>li:first-child {
+  margin-top: 0 !important;
 }
 
 .Twitter-Users-box>ul>li>label {
@@ -114,12 +157,17 @@
 .Twitter-Tweets-box>ul>li {
   border-radius: 6px;
   padding: 8px;
-  margin-bottom: 5px;
-  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+  margin-bottom: 10px;
+  box-shadow: 0 1pt 6pt rgb(0 0 0 / 15%);
   background-color: white;
   color: black;
   float: left;
   width: 100%;
+  margin-top: 10px;
+}
+
+.pointer {
+  cursor: pointer;
 }
 
 .Twitter-Tweets-box>ul>li>label {
@@ -203,7 +251,7 @@
   flex-direction: column;
   width: 566px;
   height: 170px;
-  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1pt 6pt rgb(0 0 0 / 15%);
   background-color: #15202a;
   margin-left: 25rem;
   margin-bottom: 0.1rem;
@@ -290,4 +338,9 @@
   padding-bottom: 10px;
   float: left;
   width: 100%;
+  border-bottom: 1px solid lightgray;
+}
+
+.padding-6 {
+  padding: 6px;
 }
