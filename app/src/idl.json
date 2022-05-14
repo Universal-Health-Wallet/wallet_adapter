@@ -1,6 +1,6 @@
 {
-  "version": "0.0.0",
-  "name": "crunchy_vs_smooth",
+  "version": "0.1.0",
+  "name": "cvc",
   "instructions": [
     {
       "name": "initialize",
@@ -8,12 +8,12 @@
         {
           "name": "voteAccount",
           "isMut": true,
-          "isSigner": true
+          "isSigner": false
         },
         {
-          "name": "user",
+          "name": "authority",
           "isMut": true,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "systemProgram",
@@ -21,10 +21,15 @@
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "voteAccountBump",
+          "type": "u8"
+        }
+      ]
     },
     {
-      "name": "voteCrunchy",
+      "name": "vote",
       "accounts": [
         {
           "name": "voteAccount",
@@ -32,23 +37,17 @@
           "isSigner": false
         }
       ],
-      "args": []
-    },
-    {
-      "name": "voteSmooth",
-      "accounts": [
+      "args": [
         {
-          "name": "voteAccount",
-          "isMut": true,
-          "isSigner": false
+          "name": "crunchOrSmooth",
+          "type": "bool"
         }
-      ],
-      "args": []
+      ]
     }
   ],
   "accounts": [
     {
-      "name": "VoteAccount",
+      "name": "VoteState",
       "type": {
         "kind": "struct",
         "fields": [
@@ -59,12 +58,16 @@
           {
             "name": "smooth",
             "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
     }
   ],
   "metadata": {
-    "address": "7Ntd1GePKvSSYseiHqdk88k3mRLaQrMxmGnnoVpn8QQd"
+    "address": "CSuQ2ipcHn3BbZNJDCjgwoyTRL2BpjroVseHC4U4BAHr"
   }
 }

@@ -20,3 +20,45 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+.pull-left {
+  float: left;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.Twitter-Users-box {
+  float: left;
+  width: 100%;
+  padding: 10px;
+}
+
+.Twitter-Users-box>ul {
+  float: left;
+  width: 100%;
+  font-size: 14px;
+  background-color: lightgray;
+  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+}
+
+.Twitter-Users-box>ul>li {
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 5px;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+  background-color: white;
+  color: black;
+}
+
+.Twitter-Users-box>ul>li>label {
+  font-size: 14px;
+  float: left;
+  width: 100%;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: black;
+  text-align: left;
+}

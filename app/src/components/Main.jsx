@@ -1,28 +1,37 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection } from "@solana/web3.js";
-import { Program, Provider, web3 } from "@project-serum/anchor";
-import idl from "../idl.json";
-import { useState } from "react";
+import { Program, Provider, web3, BN } from "@project-serum/anchor";
 import { Box, Container, Grid } from "@material-ui/core";
+import { useSnackbar } from "notistack";
+import { preflightCommitment, programID } from "../utils/config";
+import { capitalize } from "../utils/helpers";
 import Navbar from "./Navbar";
 import VoteOption from "./VoteOption";
 import VoteTally from "./VoteTally";
 import Footer from "./Footer";
 import Intro from "./Intro";
-import { useSnackbar } from "notistack";
 import VoteHistory from "./VoteHistory";
-import { preflightCommitment, programID, capitalize } from "../utils";
 
-export default function Main({ network, voteAccount }) {
+import idl from "./on_chain_twitter_3.json"
+
+const propTypes = {};
+
+const defaultProps = {};
+
+export default function Main({ voteAccount, voteAccountBump, network }) {
   const { enqueueSnackbar } = useSnackbar();
   const wallet = useWallet();
 
   const [votes, setVotes] = useState({
     crunchy: null,
     smooth: null,
+    twitterUsers: null,
+    tweets: null
   });
   const [voteTxHistory, setVoteTxHistory] = useState([]);
+
+  
 
   useEffect(() => {
     // Call Solana program for vote count
@@ -31,19 +40,21 @@ export default function Main({ network, voteAccount }) {
       const provider = new Provider(connection, wallet, preflightCommitment);
       const program = new Program(idl, programID, provider);
       try {
-        const account = await program.account.voteAccount.fetch(
-          voteAccount.publicKey
-        );
+        const twitterusers = await program.account.twitterUser.all();
+        const tweets = await program.account.tweet.all();
         setVotes({
-          crunchy: parseInt(account.crunchy.toString()),
-          smooth: parseInt(account.smooth.toString()),
+          twitterUsers: twitterusers,
+          tweets: tweets,
         });
       } catch (error) {
-        console.log("could not getVotes: ", error);
+        console.log("could not get tweets and twitter users : ", error);
       }
     }
 
     if (!!voteAccount) {
+      getVotes();
+    }
+    else {
       getVotes();
     }
   }, [voteAccount, network, wallet]);
@@ -54,27 +65,34 @@ export default function Main({ network, voteAccount }) {
     return provider;
   }
 
+  async function getTweetsAndUsers() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+    const twitterusers = await program.account.twitterUser.all();
+    const tweets = await program.account.tweet.all();
+    setVotes({
+      twitterUsers: twitterusers,
+      tweets: tweets,
+    });
+  }
+
   // Initialize the program if this is the first time its launched
   async function initializeVoting() {
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
+    console.log(voteAccountBump,'bump');
     try {
-      await program.rpc.initialize({
+      await program.rpc.initialize(new BN(voteAccountBump), {
         accounts: {
-          voteAccount: voteAccount.publicKey,
           user: provider.wallet.publicKey,
+          voteAccount: voteAccount,
           systemProgram: web3.SystemProgram.programId,
         },
-        signers: [voteAccount],
       });
-
-      const account = await program.account.voteAccount.fetch(
-        voteAccount.publicKey
-      );
-
+      const account = await program.account.votingState.fetch(voteAccount);
       setVotes({
-        crunchy: parseInt(account.crunchy.toString()),
-        smooth: parseInt(account.smooth.toString()),
+        crunchy: account.crunchy?.toNumber(),
+        smooth: account.smooth?.toNumber(),
       });
       enqueueSnackbar("Vote account initialized", { variant: "success" });
     } catch (error) {
@@ -84,7 +102,6 @@ export default function Main({ network, voteAccount }) {
     }
   }
 
-  // Vote for either crunchy or smooth. Poll for updated vote count on completion
   async function handleVote(side) {
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
@@ -93,21 +110,19 @@ export default function Main({ network, voteAccount }) {
         side === "crunchy"
           ? await program.rpc.voteCrunchy({
               accounts: {
-                voteAccount: voteAccount.publicKey,
+                voteAccount,
               },
             })
           : await program.rpc.voteSmooth({
               accounts: {
-                voteAccount: voteAccount.publicKey,
+                voteAccount,
               },
             });
 
-      const account = await program.account.voteAccount.fetch(
-        voteAccount.publicKey
-      );
+      const account = await program.account.votingState.fetch(voteAccount);
       setVotes({
-        crunchy: parseInt(account.crunchy.toString()),
-        smooth: parseInt(account.smooth.toString()),
+        crunchy: account.crunchy?.toNumber(),
+        smooth: account.smooth?.toNumber(),
       });
       enqueueSnackbar(`Voted for ${capitalize(side)}!`, { variant: "success" });
       setVoteTxHistory((oldVoteTxHistory) => [...oldVoteTxHistory, tx]);
@@ -123,11 +138,14 @@ export default function Main({ network, voteAccount }) {
       <Box flex="1 0 auto">
         <Navbar />
         <Container>
+          <div className="pull-left full-width text-center">
+            <button onClick={getTweetsAndUsers}>Fetch Tweets</button>
+          </div>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Intro
                 votes={votes}
-                initializeVoting={initializeVoting}
+                initializeVoting={getTweetsAndUsers}
                 programID={programID}
                 voteAccount={voteAccount}
               />
@@ -151,3 +169,6 @@ export default function Main({ network, voteAccount }) {
     </Box>
   );
 }
+
+Main.propTypes = propTypes;
+Main.defaultProps = defaultProps;

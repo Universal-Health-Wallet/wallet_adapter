@@ -4,7 +4,7 @@ const express = require("express");
 
 const voteAccount = anchor.web3.Keypair.generate();
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 
