@@ -344,3 +344,23 @@
 .padding-6 {
   padding: 6px;
 }
+
+.c-dashboard {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+.c-dashboard-nav {
+  width: 20%;
+  min-height: 100%;
+  background-color: white;
+  overflow: hidden;
+}
+.c-dashboard-content {
+  width: 80%;
+  min-height: 100%;
+  background: linear-gradient(to right, #c676f8, #5bd1d4);
+  overflow-y: scroll;
+  overflow-x: hidden;
+}

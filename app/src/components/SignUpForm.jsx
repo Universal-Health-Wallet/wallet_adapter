@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
-const SignUpForm = ({type}) => {
-  const [values, setValues] = useState({name: "", sex: "", dob: "", licenseNo: "", consultFee: ""})
+const SignUpForm = ({type, accountCreator}) => {
+  const [values, setValues] = useState({name: "", sex: "", dob: "", experience: "", consultFee: ""})
   const handleInputChange = (e) => {
     setValues({...values, [e.target.name]: e.target.value})
   }
   const handleSubmit = () => {
     alert(values);
-    // Submit to BE and move to dashboard
+    accountCreator(values);
   };
 
   return (
@@ -19,9 +19,9 @@ const SignUpForm = ({type}) => {
       <div className='c-signup-form--section'>
       <select className='c-signup-form--input' name="sex" id="sex" onChange={handleInputChange}>
         <option value="" disabled selected>Gender</option>
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-        <option value="others">Others</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Others">Others</option>
       </select>
       <input className='c-signup-form--input' type="date" name="dob" placeholder='Date Of Birth' onChange={handleInputChange} />
       </div>
@@ -29,7 +29,7 @@ const SignUpForm = ({type}) => {
         type !== "patient" && (
           <React.Fragment>
              <div className='c-signup-form--section'>
-                <input className='c-signup-form--input' name="licenseNo" value={values.licenseNo} placeholder='License Number' onChange={handleInputChange} />
+                <input type="number" className='c-signup-form--input' name="experience" value={values.experience} placeholder='Experience (In Months)' onChange={handleInputChange} />
               </div>
              <div className='c-signup-form--section'>
                 <input type="number" className='c-signup-form--input' name="consultFee" value={values.consultFee} placeholder='Fee Charged (In Solana)' onChange={handleInputChange} />

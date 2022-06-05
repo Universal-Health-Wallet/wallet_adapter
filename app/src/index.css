@@ -250,6 +250,9 @@ body {
 .u-text-left {
   text-align: left;
 }
+.u-text-center {
+  text-align: center;
+}
 .u-p--30 {
   padding: 30px;
 }

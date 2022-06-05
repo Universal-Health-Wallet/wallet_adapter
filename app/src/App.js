@@ -25,12 +25,11 @@ import {
   WalletModalProvider,
   WalletMultiButton
 } from '@solana/wallet-adapter-react-ui';
-import { Button,Col,Row, Form } from 'react-bootstrap';
 import { useSnackbar } from "notistack";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ToastContainer, toast } from 'react-toastify';    
 import HomePage from './components/HomePage';
-//require('@solana/wallet-adapter-react-ui/styles.css');
+import ListPatients from './components/ListPatients';
+import ListDoctors from './components/ListDoctors';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const wallets = [
   /* view list of available wallets at https://github.com/solana-labs/wallet-adapter#wallets */
@@ -47,9 +46,13 @@ const opts = {
   preflightCommitment: "processed"
 }
 const programID = new PublicKey(idl.metadata.address);
+console.log("Program ID")
+console.log(programID)
 
 function App() {
   const [state, setStateValue] = useState({
+    patients: [],
+    doctors: [],
     profileType: '',
     profile: null,
     isLoggedIn: false,
@@ -72,6 +75,7 @@ function App() {
     const program = new Program(idl, programID, provider);
     const doctorAccounts = await program.account.doctorProfile.all();
     console.log("Doctor Accounts : ",doctorAccounts);
+    setStateValue({...state, doctors: doctorAccounts});
   }
 
   async function getDoctor() {
@@ -99,6 +103,7 @@ function App() {
     const program = new Program(idl, programID, provider);
     const patientAccounts = await program.account.patientProfile.all();
     console.log("Patient Accounts : ",patientAccounts);
+    setStateValue({...state, patients: patientAccounts});
   }
 
   async function getPatient() {
@@ -142,8 +147,9 @@ function App() {
         programID
       );
       profile = await program.account.technicianProfile.fetch(userPda);
-    } catch {
+    } catch(e) {
       console.log("Error fetching technician profile")
+      console.log(e)
     }
       return profile;
   }
@@ -172,28 +178,22 @@ function App() {
   }
 
   async function getProfileDetails() {
-    let userProfile = null;
-    let userProfileType = '';
     const profileCheckers = [
       {type: "specialist", checker: getDoctor},
       {type: "patient", checker: getPatient},
       {type: "technician", checker: getTechnician},
       ];
     profileCheckers.forEach(checker => {
-      if (!userProfile) {
-        const profile = checker.checker();
-        if (profile) {
-          userProfileType = checker.type;
-          userProfile = profile;
-        }
-      }
+        checker.checker().then(data => {
+          if (data) {
+            setStateValue({...state, profile: data, profileType: checker.type, isLoggedIn: true})
+          }
+        }).catch(e => {console.log(e)});
     });
-    if (userProfile) {
-      setStateValue({...state, profile: userProfile, profileType: userProfileType, isLoggedIn: true})
-    }
   };
 
-  async function createDoctorAccount() {
+  async function createDoctorAccount(values) {
+    const {name, sex, dob, consultFee, experience=60} = values;
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
     var new_keypar = web3.Keypair.generate();
@@ -204,23 +204,24 @@ function App() {
           provider.wallet.publicKey.toBuffer()
         ],
         programID
-      );
-      let gc_fee_bn = new anchor.BN(500);
+      );;
+      let gc_fee_bn = new anchor.BN(consultFee);
       let time = new anchor.BN(Date.now() / 1000);
-      const doctor_profile = await program.rpc.initDoctorProfile('Bhargav','Male','09/03/1995',60,gc_fee_bn,true,time,{
+      const doctor_profile = await program.rpc.initDoctorProfile(name,sex,dob,experience,gc_fee_bn,true,time,{
         accounts: {
           doctorProfile: newDoctorPda,
           doctor: provider.wallet.publicKey,
           systemProgram: web3.SystemProgram.programId
         }
       });
-      getDoctors();
+      getProfileDetails();
     } catch (error) {
       
     }
   }
 
-  async function createPatientAccount() {
+  async function createPatientAccount(values) {
+    const {name, sex, dob } = values;
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
     var new_keypar = web3.Keypair.generate();
@@ -232,20 +233,21 @@ function App() {
         ],
         programID
       );
-      const patient_profile = await program.rpc.initPatientProfile('Vamshi','Male','05/03/1995',{
+      const patient_profile = await program.rpc.initPatientProfile(name,sex,dob,{
         accounts: {
           patientProfile: newPatientPda,
           patient: provider.wallet.publicKey,
           systemProgram: web3.SystemProgram.programId
         }
       });
-      getPatients();
+      getProfileDetails();
     } catch (error) {
       
     }
   }
 
-  async function createTechinicianAccount() {
+  async function createTechinicianAccount(values) {
+    const {name, sex, dob, consultFee, experience=60} = values;
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
     var new_keypar = web3.Keypair.generate();
@@ -257,16 +259,16 @@ function App() {
         ],
         programID
       );
-      let gc_fee_bn = new anchor.BN(500);
+      let gc_fee_bn = new anchor.BN(consultFee);
       let time = new anchor.BN(Date.now() / 1000);
-      const technician_profile = await program.rpc.initTechnicianProfile('Vamshi','Male','05/03/1995',60,gc_fee_bn,true,time,{
+      const technician_profile = await program.rpc.initTechnicianProfile(name,sex,dob,experience,gc_fee_bn,true,time,{
         accounts: {
           technicianProfile: newTechnicianPda,
           technician: provider.wallet.publicKey,
           systemProgram: web3.SystemProgram.programId
         }
       });
-      getTechnicians();
+      getProfileDetails();
     }
     catch {
 
@@ -274,7 +276,7 @@ function App() {
     
   }
 
-  async function createBloodTestBooking() {
+  async function createBloodTestBooking(doctor, patient) {
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
     var new_keypar = web3.Keypair.generate();
@@ -315,11 +317,46 @@ function App() {
     })
   }
 
-  if (wallet.connected && state.isLoggedIn) {
-    return(<div>Welcome to dashboard</div>)
+  useEffect(() => {
+    getProfileDetails()
+  }, [wallet.connected]);
+
+  if (state.isLoggedIn && wallet.connected ) {;
+    return(
+      <div className='c-dashboard'>
+      <div className='c-dashboard-nav u-text-center'>
+        <div className='u-m-t--30'>
+        <span className='u-text--alpha u-text-cyan u-text--bold u-text-font--xmb'>UHW</span>
+        </div>
+        <div className='u-m-t--45'>
+        <div className='u-text--beta u-text-magenta u-text--bold u-text-font--mb u-text-center'>{state.profile && (state.profile.doctorName || state.profile.name || state.profile.technicianName)}</div>
+        <div className='u-text-magenta'>{state.profileType}</div>
+        </div>
+        <div className='u-m-t--45'>
+          <WalletMultiButton />
+        </div>
+      </div>
+      <div className='c-dashboard-content'>
+        {state.profileType === "specialist" && (
+          <ListPatients patients={state.patients} getPatients={getPatients} />
+        )
+        }
+        {
+          state.profileType === "patient" && (
+          <ListDoctors doctors={state.doctors} getDoctors={getDoctors} />
+          )
+        }
+      </div>
+    </div>
+    )
   } else {
     return ( 
-      <HomePage wallet={wallet} />
+      <HomePage
+        wallet={wallet}
+        doctorCreator={createDoctorAccount}
+        patientCreator={createPatientAccount}
+        technicianCreator={createTechinicianAccount}
+      />
     )
     }
   }
